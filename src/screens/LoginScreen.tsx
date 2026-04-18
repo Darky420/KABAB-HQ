@@ -9,10 +9,14 @@ import {
   GoogleAuthProvider,
   OAuthProvider
 } from "firebase/auth";
+
+
 import WindowControls from "../components/WindowControls";
 import { start, onUrl } from "@fabianlars/tauri-plugin-oauth";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { AUTH_CONFIG } from "../config";
+import { generateCodeVerifier, generateCodeChallenge } from "../lib/pkce";
+
 
 interface LoginScreenProps {
   onLogin: () => void;
@@ -74,62 +78,113 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
       return;
     }
 
-    // Tauri-specific Desktop OAuth flow
+    // Tauri-specific Desktop OAuth flow using Auth Code Flow + PKCE
     try {
-      // 1. Define the response handler
+      // 1. Prepare PKCE
+      const codeVerifier = generateCodeVerifier();
+      const codeChallenge = await generateCodeChallenge(codeVerifier);
+
+      // 2. Define the response handler
       const processResponse = async (url: string) => {
         try {
-          // Parse the hash/query params
-          const hashParams = new URLSearchParams(url.split("#")[1] || url.split("?")[1]);
-          const idToken = hashParams.get("id_token");
-          const accessToken = hashParams.get("access_token");
+          const params = new URLSearchParams(url.split("?")[1]);
+          const code = params.get("code");
 
-          if (idToken || accessToken) {
-            let credential;
-            if (provider.providerId === "google.com") {
-              credential = GoogleAuthProvider.credential(idToken);
-            } else {
-              // For Discord/Generic OAuth
-              const discordOAuthProvider = new OAuthProvider("discord.com");
-              credential = discordOAuthProvider.credential({
-                accessToken: accessToken || ""
-              });
-            }
+          if (!code) throw new Error("No authorization code received");
+
+          // 3. Exchange code for token
+          let idToken = "";
+          let accessToken = "";
+
+          if (provider.providerId === "google.com") {
+            const tokenResponse = await fetch("https://oauth2.googleapis.com/token", {
+              method: "POST",
+              headers: { "Content-Type": "application/x-www-form-urlencoded" },
+              body: new URLSearchParams({
+                code,
+                client_id: AUTH_CONFIG.google.clientId,
+                client_secret: AUTH_CONFIG.google.clientSecret,
+                code_verifier: codeVerifier,
+                grant_type: "authorization_code",
+                redirect_uri: `http://127.0.0.1:14200`,
+              }),
+            });
+            const data = await tokenResponse.json();
+            if (data.error) throw new Error(data.error_description || data.error);
+            idToken = data.id_token;
+            accessToken = data.access_token;
+            
+            const credential = GoogleAuthProvider.credential(idToken);
             await signInWithCredential(auth, credential);
-            onLogin();
+          } else {
+            // Discord token exchange using PKCE
+            const tokenResponse = await fetch("https://discord.com/api/oauth2/token", {
+              method: "POST",
+              headers: { "Content-Type": "application/x-www-form-urlencoded" },
+              body: new URLSearchParams({
+                client_id: AUTH_CONFIG.discord.clientId,
+                grant_type: "authorization_code",
+                code,
+                redirect_uri: `http://127.0.0.1:14200`,
+                code_verifier: codeVerifier,
+              }),
+            });
+            const data = await tokenResponse.json();
+            if (data.error) throw new Error(data.error_description || data.error);
+            accessToken = data.access_token;
+
+            const discordOAuthProvider = new OAuthProvider("discord.com");
+            const credential = discordOAuthProvider.credential({
+              accessToken: accessToken || ""
+            });
+            await signInWithCredential(auth, credential);
           }
-        } catch (procErr: any) {
-          console.error("Error processing OAuth response:", procErr);
-          setError("Failed to process login response.");
+
+          onLogin();
+        } catch (err: any) {
+          console.error("Callback Error:", err);
+          setError(`Login processing failed: ${err.message || err}`);
         }
       };
 
-      // 2. Listen for the callback URL
       const unlisten = await onUrl(async (url) => {
         await processResponse(url);
         unlisten(); // Clean up listener
       });
 
-      // 3. Start local server and get port
-      const port = await start();
-
-      const redirectUri = `http://localhost:${port}`;
+      // 4. Start local server
+      const port = await start({ ports: [14200] });
+      const redirectUri = `http://127.0.0.1:${port}`;
       
-      // 3. Build the Auth URL
+      // 5. Build the Auth URL with PKCE
       let authUrl = "";
       if (provider.providerId === "google.com") {
-        authUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${AUTH_CONFIG.google.clientId}&redirect_uri=${redirectUri}&response_type=token&scope=openid%20profile%20email`;
+        authUrl = `https://accounts.google.com/o/oauth2/v2/auth?` + 
+          `client_id=${AUTH_CONFIG.google.clientId}&` +
+          `redirect_uri=${encodeURIComponent(redirectUri)}&` +
+          `response_type=code&` +
+          `scope=openid%20profile%20email&` +
+          `code_challenge=${codeChallenge}&` +
+          `code_challenge_method=S256`;
       } else {
-        authUrl = `https://discord.com/api/oauth2/authorize?client_id=${AUTH_CONFIG.discord.clientId}&redirect_uri=${redirectUri}&response_type=token&scope=identify%20email`;
+        // Discord Code Flow with PKCE
+        authUrl = `https://discord.com/api/oauth2/authorize?` +
+          `client_id=${AUTH_CONFIG.discord.clientId}&` +
+          `redirect_uri=${encodeURIComponent(redirectUri)}&` +
+          `response_type=code&` +
+          `scope=identify%20email&` +
+          `code_challenge=${codeChallenge}&` +
+          `code_challenge_method=S256`;
       }
 
-      // 4. Open system browser
       await openUrl(authUrl);
 
+
     } catch (err: any) {
-      console.error(err);
-      setError("Desktop login failed. Ensure browser is allowed to redirect.");
+      console.error("OAuth Error:", err);
+      setError(`Login failed: ${err.message || err || "Ensure browser is allowed to redirect."}`);
     } finally {
+
       setLoading(false);
     }
   };

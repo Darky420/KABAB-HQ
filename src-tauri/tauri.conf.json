@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "kabab-app",
+  "productName": "KABAB HQ",
   "version": "0.1.0",
-  "identifier": "com.darky.kabab-app",
+  "identifier": "com.darky.kababhq",
   "build": {
     "beforeDevCommand": "npm run dev",
     "devUrl": "http://localhost:1420",
@@ -12,7 +12,8 @@
   "app": {
     "windows": [
       {
-        "title": "kabab-app",
+        "title": "KABAB HQ",
+
         "width": 1280,
         "height": 720,
         "decorations": false
