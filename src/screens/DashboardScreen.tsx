@@ -4,7 +4,6 @@ import {
   Bell,
   Pin,
   Users,
-  Search,
   PlusCircle,
   Volume2,
   MessageSquare,
@@ -22,6 +21,8 @@ import { User, signOut } from "firebase/auth";
 import { auth } from "../firebase";
 import WindowControls from "../components/WindowControls.tsx";
 import VoiceFooter from "../components/VoiceFooter";
+import UpdateButton from "../components/UpdateButton";
+import ChangelogModal from "../components/ChangelogModal";
 import { 
   subscribeToMessages, 
   sendMessage, 
@@ -41,6 +42,7 @@ import {
   GlobalUser
 } from "../services/presenceService";
 import { useWebRTC } from "../services/useWebRTC";
+import { APP_VERSION, hasSeenChangelog } from "../services/updateService";
 import { Timestamp } from "firebase/firestore";
 import logo from "../assets/logo.png";
 import AudioRenderer from "../components/AudioRenderer.tsx";
@@ -72,6 +74,7 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ user }) => {
   const [typingUsers, setTypingUsers] = useState<TypingIndicator[]>([]);
   const [isMuted, setIsMuted] = useState(false);
   const [isDeafened, setIsDeafened] = useState(false);
+  const [showChangelog, setShowChangelog] = useState(() => !hasSeenChangelog(APP_VERSION));
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -258,10 +261,7 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ user }) => {
           </div>
         </div>
         <div className="top-nav-right">
-          <div className="top-nav-search">
-            <Search size={14} />
-            <input type="text" placeholder="SEARCH GANG..." />
-          </div>
+          <UpdateButton onShowChangelog={() => setShowChangelog(true)} />
           <button 
             className={`top-nav-btn voice ${isVoiceConnected ? "active" : ""}`}
             onClick={() => isVoiceConnected ? handleDisconnectVoice() : handleJoinVoice(VOICE_CHANNELS[0].id)}
@@ -471,6 +471,12 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ user }) => {
           </div>
         </aside>
       </div>
+
+      {/* Changelog Modal */}
+      <ChangelogModal
+        isOpen={showChangelog}
+        onClose={() => setShowChangelog(false)}
+      />
     </div>
   );
 };
