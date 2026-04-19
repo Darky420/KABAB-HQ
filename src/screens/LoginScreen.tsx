@@ -110,6 +110,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
               body: new URLSearchParams({
                 code,
                 client_id: AUTH_CONFIG.google.clientId,
+                client_secret: AUTH_CONFIG.google.clientSecret,
                 code_verifier: codeVerifier,
                 grant_type: "authorization_code",
                 redirect_uri: redirectUri,
