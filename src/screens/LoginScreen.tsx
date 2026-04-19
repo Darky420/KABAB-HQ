@@ -12,7 +12,7 @@ import {
 
 
 import WindowControls from "../components/WindowControls";
-import { start, onUrl } from "@fabianlars/tauri-plugin-oauth";
+import { start, onUrl, cancel } from "@fabianlars/tauri-plugin-oauth";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { AUTH_CONFIG } from "../config";
 import { generateCodeVerifier, generateCodeChallenge } from "../lib/pkce";
@@ -79,10 +79,17 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
     }
 
     // Tauri-specific Desktop OAuth flow using Auth Code Flow + PKCE
+    let oauthPort: number | null = null;
+    
     try {
       // 1. Prepare PKCE
       const codeVerifier = generateCodeVerifier();
       const codeChallenge = await generateCodeChallenge(codeVerifier);
+
+      // 4. Start local server
+      oauthPort = await start({ ports: [14200, 14201, 14202, 14203, 14204] });
+      const currentPort = oauthPort;
+      const redirectUri = `http://127.0.0.1:${currentPort}`;
 
       // 2. Define the response handler
       const processResponse = async (url: string) => {
@@ -105,7 +112,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
                 client_id: AUTH_CONFIG.google.clientId,
                 code_verifier: codeVerifier,
                 grant_type: "authorization_code",
-                redirect_uri: `http://127.0.0.1:14200`,
+                redirect_uri: redirectUri,
               }),
             });
             const data = await tokenResponse.json();
@@ -124,7 +131,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
                 client_id: AUTH_CONFIG.discord.clientId,
                 grant_type: "authorization_code",
                 code,
-                redirect_uri: `http://127.0.0.1:14200`,
+                redirect_uri: redirectUri,
                 code_verifier: codeVerifier,
               }),
             });
@@ -143,6 +150,11 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
         } catch (err: any) {
           console.error("Callback Error:", err);
           setError(`Login processing failed: ${err.message || err}`);
+        } finally {
+          if (oauthPort) {
+            await cancel(oauthPort);
+            oauthPort = null;
+          }
         }
       };
 
@@ -151,10 +163,6 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
         unlisten(); // Clean up listener
       });
 
-      // 4. Start local server
-      const port = await start({ ports: [14200] });
-      const redirectUri = `http://127.0.0.1:${port}`;
-      
       // 5. Build the Auth URL with PKCE
       let authUrl = "";
       if (provider.providerId === "google.com") {
@@ -178,12 +186,14 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
 
       await openUrl(authUrl);
 
-
     } catch (err: any) {
       console.error("OAuth Error:", err);
       setError(`Login failed: ${err.message || err || "Ensure browser is allowed to redirect."}`);
+      if (oauthPort) {
+        await cancel(oauthPort);
+        oauthPort = null;
+      }
     } finally {
-
       setLoading(false);
     }
   };
@@ -349,11 +359,6 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
       <div className="login-footer">
         <ShieldCheck size={14} className="shield" />
         <span>Secure Access Protocol Active for Kabab Gang Members Only</span>
-        
-        {/* Debug Info for Deployment verification */}
-        <div style={{ opacity: 0.2, fontSize: '8px', marginTop: '10px', letterSpacing: '1px' }}>
-          DEBUG_SIG: {AUTH_CONFIG.google.clientId.substring(0, 5)}...{AUTH_CONFIG.google.clientId.substring(AUTH_CONFIG.google.clientId.length - 8)}
-        </div>
       </div>
     </div>
   );
