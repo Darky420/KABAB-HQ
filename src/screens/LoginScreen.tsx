@@ -103,7 +103,6 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
               body: new URLSearchParams({
                 code,
                 client_id: AUTH_CONFIG.google.clientId,
-                client_secret: AUTH_CONFIG.google.clientSecret,
                 code_verifier: codeVerifier,
                 grant_type: "authorization_code",
                 redirect_uri: `http://127.0.0.1:14200`,
@@ -350,6 +349,11 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
       <div className="login-footer">
         <ShieldCheck size={14} className="shield" />
         <span>Secure Access Protocol Active for Kabab Gang Members Only</span>
+        
+        {/* Debug Info for Deployment verification */}
+        <div style={{ opacity: 0.2, fontSize: '8px', marginTop: '10px', letterSpacing: '1px' }}>
+          DEBUG_SIG: {AUTH_CONFIG.google.clientId.substring(0, 5)}...{AUTH_CONFIG.google.clientId.substring(AUTH_CONFIG.google.clientId.length - 8)}
+        </div>
       </div>
     </div>
   );

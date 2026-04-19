@@ -4,7 +4,7 @@
  */
 
 // App constants
-export const APP_VERSION = "0.1.1";
+export const APP_VERSION = "0.1.2";
 export const GITHUB_OWNER = "Darky420";
 export const GITHUB_REPO = "KABAB-HQ";
 
@@ -133,7 +133,7 @@ export interface ChangelogEntry {
 export function getChangelog(): ChangelogEntry[] {
   return [
     {
-      version: "0.1.1",
+      version: "0.1.2",
       date: "2026-04-19",
       title: "COMMS UPGRADE",
       categories: [
