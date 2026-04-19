@@ -86,10 +86,10 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
       const codeVerifier = generateCodeVerifier();
       const codeChallenge = await generateCodeChallenge(codeVerifier);
 
-      // 4. Start local server
+      // 4. Start local server - Using range for robustness against "Port already in use"
       oauthPort = await start({ ports: [14200, 14201, 14202, 14203, 14204] });
       const currentPort = oauthPort;
-      const redirectUri = `http://127.0.0.1:${currentPort}`;
+      const redirectUri = `http://localhost:${currentPort}`;
 
       // 2. Define the response handler
       const processResponse = async (url: string) => {
