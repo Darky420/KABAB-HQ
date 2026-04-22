@@ -5,7 +5,6 @@ import {
   RefreshCw,
   ArrowUpCircle,
   ExternalLink,
-  FileText,
 } from "lucide-react";
 import {
   checkForUpdates,
@@ -15,10 +14,10 @@ import {
 import { openUrl } from "@tauri-apps/plugin-opener";
 
 interface UpdateButtonProps {
-  onShowChangelog: () => void;
+  // Props removed as parent handles changelog separately now
 }
 
-const UpdateButton: React.FC<UpdateButtonProps> = ({ onShowChangelog }) => {
+const UpdateButton: React.FC<UpdateButtonProps> = () => {
   const [updateResult, setUpdateResult] = useState<UpdateCheckResult | null>(
     null
   );
@@ -142,10 +141,6 @@ const UpdateButton: React.FC<UpdateButtonProps> = ({ onShowChangelog }) => {
           )}
 
           <div className="update-dropdown-actions">
-            <button className="update-action-btn" onClick={onShowChangelog}>
-              <FileText size={13} />
-              <span>Changelog</span>
-            </button>
             <button
               className="update-action-btn"
               onClick={() => {

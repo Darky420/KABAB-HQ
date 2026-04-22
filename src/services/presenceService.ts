@@ -26,7 +26,7 @@ export interface GlobalUser {
   displayName: string;
   avatarUrl: string;
   lastSeen: any;
-  status: "online" | "away" | "busy";
+  status: "online" | "away" | "busy" | "invisible";
 }
 
 export const updateVoicePresence = async (
@@ -46,16 +46,21 @@ export const updateVoicePresence = async (
 
 export const updateGlobalPresence = async (
   user: { uid: string; displayName: string; avatarUrl: string },
-  status: "online" | "away" | "busy" = "online"
+  status: "online" | "away" | "busy" | "invisible" = "online"
 ) => {
   const presenceRef = doc(db, GLOBAL_PRESENCE_COLLECTION, user.uid);
-  await setDoc(presenceRef, {
-    uid: user.uid,
-    displayName: user.displayName,
-    avatarUrl: user.avatarUrl,
-    status: status,
-    lastSeen: serverTimestamp()
-  }, { merge: true });
+  
+  if (status === "invisible") {
+    await deleteDoc(presenceRef);
+  } else {
+    await setDoc(presenceRef, {
+      uid: user.uid,
+      displayName: user.displayName,
+      avatarUrl: user.avatarUrl,
+      status: status,
+      lastSeen: serverTimestamp()
+    }, { merge: true });
+  }
 };
 
 export const removeVoicePresence = async (uid: string) => {
