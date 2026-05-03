@@ -4,7 +4,7 @@
  */
 
 // App constants
-export const APP_VERSION = "0.1.7";
+export const APP_VERSION = "0.1.8";
 export const GITHUB_OWNER = "Darky420";
 export const GITHUB_REPO = "KABAB-HQ";
 
@@ -77,11 +77,13 @@ export async function checkForUpdates(): Promise<UpdateCheckResult> {
       };
     }
 
-    // Find Windows installer asset (.exe or .msi)
+    // Prefer MSI for silent in-place upgrades (no uninstall needed)
+    // Fall back to NSIS .exe or .nsis.zip if MSI is not available
     const windowsAsset = data.assets?.find(
+      (asset: { name: string }) => asset.name.endsWith(".msi")
+    ) ?? data.assets?.find(
       (asset: { name: string }) =>
         asset.name.endsWith(".exe") ||
-        asset.name.endsWith(".msi") ||
         asset.name.endsWith(".nsis.zip")
     );
 
