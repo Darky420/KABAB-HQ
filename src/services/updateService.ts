@@ -4,7 +4,7 @@
  */
 
 // App constants
-export const APP_VERSION = "0.1.6";
+export const APP_VERSION = "0.1.7";
 export const GITHUB_OWNER = "Darky420";
 export const GITHUB_REPO = "KABAB-HQ";
 
@@ -170,8 +170,34 @@ export interface ChangelogEntry {
 export function getChangelog(): ChangelogEntry[] {
   return [
     {
-      version: "0.1.6",
+      version: "0.1.7",
       date: new Date().toISOString().split('T')[0],
+      title: "SILENT AUTO-UPDATER",
+      categories: [
+        {
+          label: "New Features",
+          icon: "🔥",
+          items: [
+            "Discord-style silent auto-update — click Install, app downloads & restarts automatically",
+            "Real-time download progress bar in the update panel",
+            "Install/Downloading/Installing states with spinner and status labels",
+            "Error state with Retry button if download fails"
+          ],
+        },
+        {
+          label: "Improvements",
+          icon: "⚡",
+          items: [
+            "Firebase config moved from hardcoded values to .env variables",
+            "Update checker now falls back to /releases list if /latest API fails",
+            "Release workflow fixed: releases now publish immediately (not as drafts)"
+          ],
+        },
+      ],
+    },
+    {
+      version: "0.1.6",
+      date: "2026-05-03",
       title: "DISCORD ROLES & RELEASE WORKFLOW",
       categories: [
         {

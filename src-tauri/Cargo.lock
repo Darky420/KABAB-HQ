@@ -1927,7 +1927,7 @@ dependencies = [
 
 [[package]]
 name = "kabab-app"
-version = "0.1.6"
+version = "0.1.7"
 dependencies = [
  "futures-util",
  "reqwest 0.12.28",
