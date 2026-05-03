@@ -776,7 +776,16 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ user }) => {
                     </div>
                   </div>
                 )}
-                <img className="message-avatar" src={getAvatarUrl(msg.uid, msg.photoURL, msg.displayName)} alt="avatar" />
+                <img 
+                  className="message-avatar" 
+                  src={
+                    // For own messages, always use the live Firestore profile photo so avatar updates instantly
+                    msg.uid === user.uid
+                      ? (userProfile?.photoURL || getAvatarUrl(user.uid, user.photoURL, msg.displayName))
+                      : getAvatarUrl(msg.uid, msg.photoURL, msg.displayName)
+                  } 
+                  alt="avatar" 
+                />
                 <div className="message-content">
                   <div className="message-header">
                     <span className="msg-username" style={msg.uid === user.uid ? { color: "var(--cyber-green)" } : undefined}>

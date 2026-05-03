@@ -3557,6 +3557,13 @@ a {
   opacity: 0.7;
   cursor: not-allowed;
 }
+
+.upload-trigger-btn.success {
+  background: rgba(0, 255, 136, 0.1);
+  border-color: var(--cyber-green);
+  border-style: solid;
+  color: var(--cyber-green);
+}
  
 .banner-overlay {
   position: absolute;

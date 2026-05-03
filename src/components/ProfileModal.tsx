@@ -29,7 +29,8 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ uid, initialProfile, onClos
   const [isUploadingBanner, setIsUploadingBanner] = useState(false);
   const [activeTab, setActiveTab] = useState<"edit" | "preview">("edit");
   const [errorHeader, setErrorHeader] = useState<string | null>(null);
- 
+  const [avatarSuccess, setAvatarSuccess] = useState(false);
+
   const handleSave = async () => {
     if (isUploadingAvatar || isUploadingBanner) return;
     setIsSaving(true);
@@ -50,7 +51,7 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ uid, initialProfile, onClos
       ...prev,
       badges: prev.badges?.includes(badgeId)
         ? prev.badges.filter(id => id !== badgeId)
-        : [...(prev.badges || []), badgeId].slice(0, 3) // Max 3 badges
+        : [...(prev.badges || []), badgeId].slice(0, 3)
     }));
   };
  
@@ -65,30 +66,39 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ uid, initialProfile, onClos
  
     if (type === "avatar") setIsUploadingAvatar(true);
     else setIsUploadingBanner(true);
+    setErrorHeader(null);
+
     try {
       console.log(`Starting ${type} upload for user ${uid}...`);
-      // Compress and resize before upload
       const maxWidth = type === "avatar" ? 512 : 1200;
       const maxHeight = type === "avatar" ? 512 : 600;
-      console.log(`Compressing ${type}...`);
       const compressedBlob = await compressImage(file, maxWidth, maxHeight, 0.85);
-      console.log(`Compression done. Original: ${file.size} bytes, Compressed: ${compressedBlob.size} bytes.`);
+      console.log(`Compression done. Original: ${file.size}B → Compressed: ${compressedBlob.size}B`);
 
-      const url = await uploadProfileImage(uid, compressedBlob, type);
+      const rawUrl = await uploadProfileImage(uid, compressedBlob, type);
+      // Cache-bust so browser doesn't serve the old cached image
+      const url = `${rawUrl}?t=${Date.now()}`;
       console.log(`${type} upload success! URL: ${url}`);
-      
+
+      const updatedField = type === "avatar" ? { photoURL: url } : { bannerUrl: url };
+
+      // Update local form state
+      setFormData(prev => ({ ...prev, ...updatedField }));
+
+      // ✅ Auto-save to Firestore immediately — no need to click "Save Changes" for images
+      await updateUserProfile(uid, updatedField);
+      console.log(`${type} auto-saved to Firestore ✅`);
+
       if (type === "avatar") {
-        setFormData(prev => ({ ...prev, photoURL: url }));
-      } else {
-        setFormData(prev => ({ ...prev, bannerUrl: url }));
+        setAvatarSuccess(true);
+        setTimeout(() => setAvatarSuccess(false), 3000);
       }
     } catch (err: any) {
       console.error("Upload failed in ProfileModal:", err);
-      setErrorHeader(`Upload failed: ${err.message || "Check your internet or Firebase permissions"}`);
+      setErrorHeader(`Upload failed: ${err.message || "Check Supabase Storage permissions"}`);
     } finally {
-      setIsUploadingAvatar(false);
-      setIsUploadingBanner(false);
-      // Reset input value so same file can be picked again
+      if (type === "avatar") setIsUploadingAvatar(false);
+      else setIsUploadingBanner(false);
       if (e.target) e.target.value = "";
     }
   };
@@ -162,12 +172,16 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ uid, initialProfile, onClos
                       onChange={e => handleImageUpload(e, "avatar")} 
                     />
                     <button 
-                      className="upload-trigger-btn" 
+                      className={`upload-trigger-btn ${avatarSuccess ? "success" : ""}`}
                       onClick={() => avatarInputRef.current?.click()}
                       disabled={isUploadingAvatar}
                     >
-                      {isUploadingAvatar ? <Loader2 className="animate-spin" size={16} /> : <Camera size={16} />}
-                      {isUploadingAvatar ? "Uploading..." : "Change Avatar"}
+                      {isUploadingAvatar 
+                        ? <Loader2 className="animate-spin" size={16} /> 
+                        : avatarSuccess 
+                          ? <Check size={16} />
+                          : <Camera size={16} />}
+                      {isUploadingAvatar ? "Uploading..." : avatarSuccess ? "Saved!" : "Change Avatar"}
                     </button>
                   </section>
                   <section>
