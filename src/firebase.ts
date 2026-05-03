@@ -3,12 +3,12 @@ import { getAuth, GoogleAuthProvider, OAuthProvider } from "firebase/auth";
 import { initializeFirestore } from "firebase/firestore";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyA6QFABeGY2Y0oMKz_CqzO7nx4D7xxFSMs",
-  authDomain: "kabab-gang-launcher.firebaseapp.com",
-  projectId: "kabab-gang-launcher",
-  storageBucket: "kabab-gang-launcher.firebasestorage.app",
-  messagingSenderId: "100750247935",
-  appId: "1:100750247935:web:0bcabb0faa0e046cadc9ca",
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID,
 };
 
 const app = initializeApp(firebaseConfig);
