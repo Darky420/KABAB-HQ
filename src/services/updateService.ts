@@ -4,7 +4,7 @@
  */
 
 // App constants
-export const APP_VERSION = "0.1.5";
+export const APP_VERSION = "0.1.6";
 export const GITHUB_OWNER = "Darky420";
 export const GITHUB_REPO = "KABAB-HQ";
 
@@ -132,6 +132,29 @@ export interface ChangelogEntry {
 
 export function getChangelog(): ChangelogEntry[] {
   return [
+    {
+      version: "0.1.6",
+      date: new Date().toISOString().split('T')[0],
+      title: "DISCORD ROLES & RELEASE WORKFLOW",
+      categories: [
+        {
+          label: "New Features",
+          icon: "🔥",
+          items: [
+            "Added Discord-style role badges to the member list",
+            "Role badges show colors and labels like Gang Leader, Kabab Chef, etc."
+          ],
+        },
+        {
+          label: "Improvements",
+          icon: "⚡",
+          items: [
+            "GitHub Actions release workflow now dynamically generates changelog",
+            "Installation instructions now specify the .exe setup file"
+          ],
+        },
+      ],
+    },
     {
       version: "0.1.5",
       date: "2026-04-20",
