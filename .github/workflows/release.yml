@@ -19,6 +19,8 @@ jobs:
     runs-on: ${{ matrix.platform }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: setup node
         uses: actions/setup-node@v4
@@ -31,12 +33,25 @@ jobs:
       - name: setup rust
         uses: dtolnay/rust-toolchain@stable
 
+      - name: Generate Changelog
+        id: changelog
+        shell: bash
+        run: |
+          PREV_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
+          echo "CHANGES<<EOF" >> $GITHUB_OUTPUT
+          if [ -z "$PREV_TAG" ]; then
+            git log -5 --pretty=format:"- %s" >> $GITHUB_OUTPUT
+          else
+            git log ${PREV_TAG}..HEAD --pretty=format:"- %s" >> $GITHUB_OUTPUT
+          fi
+          echo "" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
       - name: build app
         uses: tauri-apps/tauri-action@v0
+        # noinspection ALL
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
-          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
         with:
           tagName: v__VERSION__
           releaseName: 'KABAB HQ v__VERSION__'
@@ -44,11 +59,11 @@ jobs:
             ## 🔥 KABAB HQ v__VERSION__
 
             ### What's New
-            Check the in-app changelog for full details.
+            ${{ steps.changelog.outputs.CHANGES }}
 
             ### Installation
-            1. Download the `.msi` installer from the assets below
-            2. Run the installer
+            1. Download the `.exe` setup file from the assets below
+            2. Run the setup file
             3. Launch KABAB HQ from your Start Menu
 
             ### Auto-Update

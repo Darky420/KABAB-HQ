@@ -27,6 +27,7 @@ export interface GlobalUser {
   avatarUrl: string;
   lastSeen: any;
   status: "online" | "away" | "busy" | "invisible";
+  badges?: string[];
 }
 
 export const updateVoicePresence = async (
@@ -45,7 +46,7 @@ export const updateVoicePresence = async (
 };
 
 export const updateGlobalPresence = async (
-  user: { uid: string; displayName: string; avatarUrl: string },
+  user: { uid: string; displayName: string; avatarUrl: string; badges?: string[] },
   status: "online" | "away" | "busy" | "invisible" = "online"
 ) => {
   const presenceRef = doc(db, GLOBAL_PRESENCE_COLLECTION, user.uid);
@@ -58,6 +59,7 @@ export const updateGlobalPresence = async (
       displayName: user.displayName,
       avatarUrl: user.avatarUrl,
       status: status,
+      badges: user.badges || [],
       lastSeen: serverTimestamp()
     }, { merge: true });
   }

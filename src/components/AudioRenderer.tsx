@@ -4,39 +4,32 @@ interface AudioRendererProps {
   remoteStreams: Map<string, MediaStream>;
 }
 
+const AudioElement: React.FC<{ stream: MediaStream }> = ({ stream }) => {
+  const audioRef = useRef<HTMLAudioElement>(null);
+
+  useEffect(() => {
+    if (audioRef.current) {
+      audioRef.current.srcObject = stream;
+      audioRef.current.play().catch(err => {
+        console.error("Audio playback failed:", err);
+      });
+    }
+  }, [stream]);
+
+  return <audio ref={audioRef} autoPlay />;
+};
+
 /**
  * Invisible component that renders and plays remote audio streams.
  */
 const AudioRenderer: React.FC<AudioRendererProps> = ({ remoteStreams }) => {
-  const audioRefs = useRef<Map<string, HTMLAudioElement>>(new Map());
-
-  useEffect(() => {
-    // Add new streams
-    Array.from(remoteStreams.entries()).forEach(([uid, stream]) => {
-      let audio = audioRefs.current.get(uid);
-      if (!audio) {
-        audio = new Audio();
-        audio.autoplay = true;
-        audioRefs.current.set(uid, audio);
-      }
-      if (audio.srcObject !== stream) {
-        audio.srcObject = stream;
-      }
-    });
-
-    // Cleanup ended streams
-    Array.from(audioRefs.current.keys()).forEach((uid) => {
-      if (!remoteStreams.has(uid)) {
-        const audio = audioRefs.current.get(uid);
-        if (audio) {
-          audio.srcObject = null;
-          audioRefs.current.delete(uid);
-        }
-      }
-    });
-  }, [remoteStreams]);
-
-  return null; // This component doesn't render anything UI-wise
+  return (
+    <div style={{ display: "none" }}>
+      {Array.from(remoteStreams.entries()).map(([uid, stream]) => (
+        <AudioElement key={uid} stream={stream} />
+      ))}
+    </div>
+  );
 };
 
 export default AudioRenderer;

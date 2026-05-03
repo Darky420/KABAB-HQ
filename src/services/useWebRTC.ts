@@ -79,7 +79,10 @@ export const useWebRTC = (channelId: string | null, myUid: string, isMuted: bool
           const { from, type, payload } = signal;
 
           if (type === "offer") {
-            const pc = createPeerConnection(from, stream);
+            let pc = peerConnections.current.get(from);
+            if (!pc) {
+              pc = createPeerConnection(from, stream);
+            }
             await pc.setRemoteDescription(new RTCSessionDescription(payload));
             const answer = await pc.createAnswer();
             await pc.setLocalDescription(answer);
@@ -98,10 +101,13 @@ export const useWebRTC = (channelId: string | null, myUid: string, isMuted: bool
           users.forEach(async (user) => {
             if (user.uid !== myUid && user.channelId === channelId && !peerConnections.current.has(user.uid)) {
               // We found someone in our channel. Let's send an offer!
-              const pc = createPeerConnection(user.uid, stream);
-              const offer = await pc.createOffer();
-              await pc.setLocalDescription(offer);
-              sendSignal(channelId, { type: "offer", from: myUid, to: user.uid, payload: offer });
+              // Use lexicographical comparison to prevent WebRTC glare (both sending offers)
+              if (myUid > user.uid) {
+                const pc = createPeerConnection(user.uid, stream);
+                const offer = await pc.createOffer();
+                await pc.setLocalDescription(offer);
+                sendSignal(channelId, { type: "offer", from: myUid, to: user.uid, payload: offer });
+              }
             }
           });
         });

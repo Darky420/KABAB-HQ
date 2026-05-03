@@ -66,7 +66,8 @@ import {
   UserProfile,
   subscribeToUserProfile,
   updateUserProfile,
-  StatusType
+  StatusType,
+  KABAB_BADGES
 } from "../services/profileService";
 
 import ProfileModal from "../components/ProfileModal";
@@ -192,11 +193,11 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ user }) => {
 
   // Update Global Presence when profile or name changes
   useEffect(() => {
-    const avatarUrl = userProfile?.photoURL || getAvatarUrl(user.uid, user.photoURL);
+    const avatarUrl = userProfile?.photoURL || getAvatarUrl(user.uid, user.photoURL, displayName);
     const status = userProfile?.statusType || "online";
     console.log("Syncing presence for", user.uid, "with avatar:", avatarUrl, "Status:", status);
-    updateGlobalPresence({ uid: user.uid, displayName, avatarUrl }, status as any);
-  }, [user.uid, displayName, userProfile?.photoURL, user.photoURL, userProfile?.statusType]);
+    updateGlobalPresence({ uid: user.uid, displayName, avatarUrl, badges: userProfile?.badges || [] }, status as any);
+  }, [user.uid, displayName, userProfile?.photoURL, user.photoURL, userProfile?.statusType, userProfile?.badges]);
 
   // Listen to Global Presence (Keep the subscription separate)
   useEffect(() => {
@@ -239,7 +240,7 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ user }) => {
   // Update Voice Presence when Mute/Deafen changes
   useEffect(() => {
     if (activeVoiceChannelId) {
-      const avatarUrl = userProfile?.photoURL || getAvatarUrl(user.uid, user.photoURL);
+      const avatarUrl = userProfile?.photoURL || getAvatarUrl(user.uid, user.photoURL, displayName);
       updateVoicePresence({
         uid: user.uid,
         displayName,
@@ -279,7 +280,7 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ user }) => {
     if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
     setTypingStatus(activeChannelId, { uid: user.uid, displayName }, false);
 
-    const avatarUrl = userProfile?.photoURL || getAvatarUrl(user.uid, user.photoURL);
+    const avatarUrl = userProfile?.photoURL || getAvatarUrl(user.uid, user.photoURL, displayName);
     
     const replyData = replyingTo ? {
       messageId: replyingTo.id,
@@ -313,7 +314,7 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ user }) => {
       { 
         uid: user.uid, 
         displayName, 
-        avatarUrl: getAvatarUrl(user.uid, user.photoURL),
+        avatarUrl: getAvatarUrl(user.uid, user.photoURL, displayName),
         channelId: channelId,
         isMuted,
         isDeafened
@@ -349,7 +350,7 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ user }) => {
   };
  
   const handleSendMedia = async (type: 'gif' | 'sticker', url: string) => {
-    const avatarUrl = userProfile?.photoURL || getAvatarUrl(user.uid, user.photoURL);
+    const avatarUrl = userProfile?.photoURL || getAvatarUrl(user.uid, user.photoURL, displayName);
     
     const replyData = replyingTo ? {
       messageId: replyingTo.id,
@@ -386,10 +387,12 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ user }) => {
     return `TODAY ${hours}:${mins}`;
   };
 
-  const getAvatarUrl = (uid: string, photoURL?: string | null) => {
+  const getAvatarUrl = (uid: string, photoURL?: string | null, name?: string | null) => {
     if (photoURL) return photoURL;
-    const num = Math.abs(uid.charCodeAt(0) * 7 + uid.charCodeAt(1) * 3) % 70;
-    return `https://i.pravatar.cc/150?img=${num}`;
+    if (name) {
+      return `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=random`;
+    }
+    return `https://api.dicebear.com/7.x/bottts/svg?seed=${uid}`;
   };
 
   const handleLogout = async () => {
@@ -595,7 +598,7 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ user }) => {
           <div className="user-controls" onClick={() => setShowProfileModal(true)} style={{ cursor: "pointer" }}>
             <div className="user-info">
               <div className="user-avatar">
-                <img src={userProfile?.photoURL || getAvatarUrl(user.uid, user.photoURL)} alt="avatar" />
+                <img src={userProfile?.photoURL || getAvatarUrl(user.uid, user.photoURL, displayName)} alt="avatar" />
                 <div className={`status ${userProfile?.statusType || 'online'}`} />
               </div>
               <div className="user-details">
@@ -773,7 +776,7 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ user }) => {
                     </div>
                   </div>
                 )}
-                <img className="message-avatar" src={getAvatarUrl(msg.uid, msg.photoURL)} alt="avatar" />
+                <img className="message-avatar" src={getAvatarUrl(msg.uid, msg.photoURL, msg.displayName)} alt="avatar" />
                 <div className="message-content">
                   <div className="message-header">
                     <span className="msg-username" style={msg.uid === user.uid ? { color: "var(--cyber-green)" } : undefined}>
@@ -946,6 +949,25 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ user }) => {
                       {u.displayName}
                     </span>
                     <span className="member-activity">{u.status === "online" ? "Active" : u.status}</span>
+                    {u.badges && u.badges.length > 0 && (
+                      <div className="member-roles">
+                        {u.badges.map(badgeId => {
+                          const badge = KABAB_BADGES.find(b => b.id === badgeId);
+                          if (!badge) return null;
+                          return (
+                            <span 
+                              key={badge.id} 
+                              className="member-role-badge" 
+                              style={{ borderColor: `${badge.color}40`, color: badge.color, backgroundColor: `${badge.color}10` }}
+                              title={badge.label}
+                            >
+                              <span className="role-dot" style={{ backgroundColor: badge.color }}></span>
+                              {badge.label}
+                            </span>
+                          );
+                        })}
+                      </div>
+                    )}
                   </div>
                 </div>
               ))}
@@ -979,7 +1001,7 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ user }) => {
                 messages.filter(m => m.isPinned).map(msg => (
                   <div className="pinned-item" key={msg.id}>
                     <div className="pinned-item-header">
-                      <img src={getAvatarUrl(msg.uid)} alt="avatar" />
+                      <img src={getAvatarUrl(msg.uid, msg.photoURL, msg.displayName)} alt="avatar" />
                       <span className="username">{msg.displayName}</span>
                       <span className="time">{formatTime(msg.createdAt)}</span>
                     </div>
