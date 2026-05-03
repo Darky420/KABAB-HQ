@@ -56,21 +56,20 @@ function compareVersions(a: string, b: string): number {
 }
 
 /**
- * Fetch the latest release from GitHub API
+ * Fetch the latest published (non-draft) release from GitHub API.
+ * Falls back to /releases list if /latest endpoint returns nothing useful.
  */
 export async function checkForUpdates(): Promise<UpdateCheckResult> {
   try {
-    const response = await fetch(
-      `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/releases/latest`,
-      {
-        headers: {
-          Accept: "application/vnd.github.v3+json",
-        },
-      }
-    );
+    // Primary: /releases/latest — only works for non-draft releases
+    let data = await fetchLatestRelease();
 
-    if (!response.ok) {
-      // No releases found or rate limited
+    // Fallback: list all releases and pick the first non-draft one
+    if (!data) {
+      data = await fetchFirstPublishedRelease();
+    }
+
+    if (!data) {
       return {
         updateAvailable: false,
         currentVersion: APP_VERSION,
@@ -78,13 +77,11 @@ export async function checkForUpdates(): Promise<UpdateCheckResult> {
       };
     }
 
-    const data = await response.json();
-
-    // Find Windows installer asset (.msi or .exe)
+    // Find Windows installer asset (.exe or .msi)
     const windowsAsset = data.assets?.find(
       (asset: { name: string }) =>
-        asset.name.endsWith(".msi") ||
         asset.name.endsWith(".exe") ||
+        asset.name.endsWith(".msi") ||
         asset.name.endsWith(".nsis.zip")
     );
 
@@ -101,6 +98,10 @@ export async function checkForUpdates(): Promise<UpdateCheckResult> {
     const updateAvailable =
       compareVersions(latestRelease.version, APP_VERSION) > 0;
 
+    console.log(
+      `[UpdateService] Current: ${APP_VERSION} | Latest: ${latestRelease.version} | Update: ${updateAvailable}`
+    );
+
     return {
       updateAvailable,
       currentVersion: APP_VERSION,
@@ -113,6 +114,42 @@ export async function checkForUpdates(): Promise<UpdateCheckResult> {
       currentVersion: APP_VERSION,
       latestRelease: null,
     };
+  }
+}
+
+async function fetchLatestRelease(): Promise<any | null> {
+  try {
+    const response = await fetch(
+      `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/releases/latest`,
+      { headers: { Accept: "application/vnd.github.v3+json" } }
+    );
+    if (!response.ok) return null;
+    const data = await response.json();
+    // /latest can still return a draft in edge cases — guard against it
+    if (data.draft) return null;
+    return data;
+  } catch {
+    return null;
+  }
+}
+
+async function fetchFirstPublishedRelease(): Promise<any | null> {
+  try {
+    const response = await fetch(
+      `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/releases?per_page=10`,
+      { headers: { Accept: "application/vnd.github.v3+json" } }
+    );
+    if (!response.ok) return null;
+    const releases = await response.json();
+    // Pick first release that is published (not a draft, not a prerelease)
+    return (
+      releases.find(
+        (r: { draft: boolean; prerelease: boolean }) =>
+          !r.draft && !r.prerelease
+      ) || null
+    );
+  } catch {
+    return null;
   }
 }
 
