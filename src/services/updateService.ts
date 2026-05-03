@@ -4,7 +4,7 @@
  */
 
 // App constants
-export const APP_VERSION = "0.1.8";
+export const APP_VERSION = "0.1.9";
 export const GITHUB_OWNER = "Darky420";
 export const GITHUB_REPO = "KABAB-HQ";
 
@@ -171,6 +171,49 @@ export interface ChangelogEntry {
 
 export function getChangelog(): ChangelogEntry[] {
   return [
+    {
+      version: "0.1.9",
+      date: "2026-05-03",
+      title: "AUTO-RESTART AFTER UPDATE",
+      categories: [
+        {
+          label: "New Features",
+          icon: "🔥",
+          items: [
+            "App now auto-restarts after update installs — fully Discord-style",
+            "Hidden restart script launches app ~10 seconds after MSI finishes",
+            "No manual relaunch needed after update",
+            "v0.1.8 changelog entry now shows correctly in WHAT'S NEW",
+          ],
+        },
+      ],
+    },
+    {
+      version: "0.1.8",
+      date: "2026-05-03",
+      title: "TRUE SILENT UPGRADE",
+      categories: [
+        {
+          label: "New Features",
+          icon: "🔥",
+          items: [
+            "MSI installer used for updates — true in-place upgrade, NO uninstall required",
+            "App auto-restarts after update installs (Discord-style)",
+            "Profile image auto-saves on upload — no need to click Save Changes",
+            "Change Avatar button shows green ✓ for 3 seconds after successful upload",
+          ],
+        },
+        {
+          label: "Bug Fixes",
+          icon: "🐛",
+          items: [
+            "Fixed: profile image change not reflecting in chat messages",
+            "Fixed: old cached avatar shown after profile image update (cache-busting added)",
+            "Fixed: NSIS installer was requiring uninstall before upgrade",
+          ],
+        },
+      ],
+    },
     {
       version: "0.1.7",
       date: new Date().toISOString().split('T')[0],
